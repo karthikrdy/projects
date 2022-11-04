@@ -1,0 +1,52 @@
+/**
+ * @NApiVersion 2.0
+ * @NScriptType ClientScript
+ * @NModuleScope Public
+ */
+
+define(['N/search', 'N/currentRecord'], function (search, currentRecord) {
+    var record = currentRecord.get();
+
+    function fieldChanged(context) {
+        if (context.fieldId == 'custpage_sosubsdry') {
+            var cust = record.getValue('custpage_sosubsdry');
+
+            if (cust == '')
+                return;
+
+            var custSearch = search.create({
+                type: "customer",
+                filters:
+                [
+                    [["subsidiary", "anyof", cust], "OR", ["representingsubsidiary", "anyof", cust]],
+                    "AND",
+                    ["isinactive", "is", "F"]
+                ],
+                columns: ['entityid']
+            });
+
+            var custSearchResults = custSearch.run().getRange({
+                start: 0,
+                end: 1000
+            });
+
+            var custfield = record.getField('custpage_customer');
+            custfield.removeSelectOption({
+                value: null
+            });
+            if (custSearchResults.length != 0) {
+                for (var i in custSearchResults) {
+                    custfield.insertSelectOption({
+                        value: custSearchResults[i].id,
+                        text: custSearchResults[i].getValue('entityid') + custSearchResults[i].getValue('name')
+                    });
+                }
+            }
+        }
+    }
+
+    return {
+        fieldChanged: fieldChanged
+    };
+
+});
